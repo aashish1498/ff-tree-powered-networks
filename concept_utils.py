@@ -1,4 +1,4 @@
-from concepts import Node, Source
+from concepts import Node, Resource, Source
 
 
 def get_node(node_name: str, nodes: list[Node]) -> Node:
@@ -13,6 +13,15 @@ def get_source(source_name: str, sources: list[Source]) -> Source:
         if source.name == source_name:
             return source
     return None
+
+
+def add_to_sources(
+    receiving_node: Node, source_name: str, resource: Resource, amount: float, sources: list[Source]
+) -> None:
+    source = Source(source_name)
+    source.add_receiving_node(receiving_node)
+    source.add_resource_distribution(resource, amount)
+    sources.append(source)
 
 
 def stringify_node_resources(node: Node) -> str:

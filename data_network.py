@@ -1,7 +1,7 @@
 import math
 from concepts import Node, Resource, Link, Signal, Source, State
 from enum import Enum
-from concept_utils import get_node, get_source
+from concept_utils import get_node, get_source, add_to_sources
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -13,7 +13,7 @@ class ResourceType(Enum):
     MASK = Resource("MASK", 1.0)
     VACCINE = Resource("VACCINE", 2.0)
     VENTILATOR = Resource("VENTILATOR", 3.0)
-    SINK = Resource("SINK", -2.5)
+    OUTBREAK = Resource("OUTBREAK", -2.5)
 
     def get(self) -> Resource:
         return self.value.clone()
@@ -131,32 +131,20 @@ sources = setup_sources(nodes)
 
 for i in range(iterations):
     if i == 20:
-        mask_source = Source("Masks")
-        mask_source.add_receiving_node(get_node("Hospital B", nodes))
-        mask_source.add_resource_distribution(ResourceType.MASK.get(), 200)
-        sources.append(mask_source)
+        add_to_sources(get_node("Hospital B", nodes), "Masks", ResourceType.MASK.get(), 200, sources)
     if i == 50:
         sources.remove(get_source("Vaccines", sources))
     if i == 80:
-        outbreak_source = Source("Outbreak")
-        outbreak_source.add_receiving_node(get_node("Hospital C", nodes))
-        outbreak_source.add_resource_distribution(ResourceType.SINK.get(), 30)
-        sources.append(outbreak_source)
+        add_to_sources(get_node("Hospital C", nodes), "Outbreak", ResourceType.OUTBREAK.get(), 30, sources)
     if i == 110:
+        add_to_sources(get_node("Hospital A", nodes), "Vaccines", ResourceType.VACCINE.get(), 50, sources)
         get_node("Hospital C", nodes).set_signal(Signal.DANGER)
-        vaccine_source = Source("Vaccines")
-        vaccine_source.add_receiving_node(get_node("Hospital A", nodes))
-        vaccine_source.add_resource_distribution(ResourceType.VACCINE.get(), 50)
-        sources.append(vaccine_source)
     if i == 120:
         sources.remove(get_source("Masks", sources))
     if i == 170:
         sources.remove(get_source("Outbreak", sources))
     if i == 190:
-        ventilator_source = Source("Ventilators")
-        ventilator_source.add_receiving_node(get_node("Hospital D", nodes))
-        ventilator_source.add_resource_distribution(ResourceType.VENTILATOR.get(), 20)
-        sources.append(ventilator_source)
+        add_to_sources(get_node("Hospital D", nodes), "Ventilators", ResourceType.VENTILATOR.get(), 20, sources)
         get_node("Hospital C", nodes).set_signal(Signal.OPPORTUNITY)
 
     for source in sources:
