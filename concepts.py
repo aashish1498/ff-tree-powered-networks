@@ -3,22 +3,26 @@ from enum import Enum
 
 class State(Enum):
     DEFAULT = 1
-    LOW_USE = 0.5
-    HIGH_USE = 2
+    CONSERVING = 0.5
+    EXPENDING = 2
+
+
+class Signal(Enum):
+    NONE = 0
+    DANGER = 1
+    OPPORTUNITY = 2
 
 
 class Resource:
     name: str
-    positive: bool
     value: float
 
-    def __init__(self, name: str, value: float, positive=True):
+    def __init__(self, name: str, value: float):
         self.name = name
         self.value = value
-        self.positive = positive
 
     def clone(self):
-        return Resource(self.name, self.value, self.positive)
+        return Resource(self.name, self.value)
 
 
 class Node:
@@ -27,6 +31,7 @@ class Node:
     effectiveness: float = 0
     usage_rate = 0.2  # Percent of resources used per iteration
     state = State.DEFAULT
+    signal = Signal.NONE
 
     def __init__(self, name: str, usage_rate: float):
         self.name = name
@@ -54,8 +59,11 @@ class Node:
                     retrieved_resources.append(resource_list.pop(0))
         return retrieved_resources
 
-    def apply_state(self, state: State):
+    def set_state(self, state: State):
         self.state = state
+
+    def set_signal(self, signal: Signal):
+        self.signal = signal
 
 
 class Link:
@@ -64,6 +72,7 @@ class Link:
     link_effectiveness: float
     resource_gradients: dict[str, float]
     gradient_tolerance: float = 0.1
+    current_transfer_amount: float = 0
 
     def __init__(self, first_node: Node, second_node: Node, link_effectiveness=0.5):
         self.first_node = first_node
@@ -86,15 +95,29 @@ class Link:
             return node.usage_rate * len(node.resources[resource_name])
         return 0
 
+    def handle_signals(self):
+        if self.first_node.signal == Signal.DANGER or self.second_node.signal == Signal.DANGER:
+            self.first_node.set_state(State.CONSERVING)
+            self.second_node.set_state(State.CONSERVING)
+        elif self.first_node.signal == Signal.OPPORTUNITY:
+            self.first_node.set_state(State.EXPENDING)
+            self.second_node.set_state(State.DEFAULT)
+        elif self.second_node.signal == Signal.OPPORTUNITY:
+            self.second_node.set_state(State.EXPENDING)
+            self.first_node.set_state(State.DEFAULT)
+
     def transfer_resources(self):
+        self.handle_signals()
         self.set_gradients()
         for resource_name, gradient in self.resource_gradients.items():
             if gradient > 0:
                 for resource in self.first_node.retrieve_resources(resource_name, int(gradient)):
                     self.second_node.add_resource(resource)
+                    self.current_transfer_amount += resource.value
             else:
                 for resource in self.second_node.retrieve_resources(resource_name, int(-gradient)):
                     self.first_node.add_resource(resource)
+                    self.current_transfer_amount -= resource.value
 
 
 class Source:
